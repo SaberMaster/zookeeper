@@ -268,10 +268,12 @@ public class ClientCnxn {
             this.request = request;
             this.response = response;
 
+            // create bb
             try {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos);
                 boa.writeInt(-1, "len"); // We'll fill this in later
+                // serialize header
                 if (requestHeader != null) {
                     requestHeader.serialize(boa, "header");
                 }
@@ -280,6 +282,7 @@ public class ClientCnxn {
                     // append "am-I-allowed-to-be-readonly" flag
                     boa.writeBool(readOnly, "readOnly");
                 } else if (request != null) {
+                    // serialize request
                     request.serialize(boa, "request");
                 }
                 baos.close();
@@ -290,6 +293,7 @@ public class ClientCnxn {
                 LOG.warn("Ignoring unexpected exception", e);
             }
 
+            // not serialize watchRegistration
             this.watchRegistration = watchRegistration;
         }
 
@@ -463,6 +467,7 @@ public class ClientCnxn {
 
             // materialize the watchers based on the event
             WatcherSetEventPair pair = new WatcherSetEventPair(
+                    // get all watcher according the event from watchermanager
                     watcher.materialize(event.getState(), event.getType(),
                             event.getPath()),
                             event);
@@ -494,6 +499,7 @@ public class ClientCnxn {
                  if (event == eventOfDeath) {
                     wasKilled = true;
                  } else {
+                     // process event
                     processEvent(event);
                  }
                  if (wasKilled)
@@ -518,6 +524,7 @@ public class ClientCnxn {
                   WatcherSetEventPair pair = (WatcherSetEventPair) event;
                   for (Watcher watcher : pair.watchers) {
                       try {
+                          // watcher process
                           watcher.process(pair.event);
                       } catch (Throwable t) {
                           LOG.error("Error while calling watcher ", t);
@@ -626,7 +633,9 @@ public class ClientCnxn {
     }
 
     private void finishPacket(Packet p) {
+        // register watcher in zkwatchmanager
         if (p.watchRegistration != null) {
+            // register according rc
             p.watchRegistration.register(p.replyHeader.getErr());
         }
 
@@ -711,6 +720,7 @@ public class ClientCnxn {
         private boolean isFirstConnect = true;
 
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
+            //read response
             ByteBufferInputStream bbis = new ByteBufferInputStream(
                     incomingBuffer);
             BinaryInputArchive bbia = BinaryInputArchive.getArchive(bbis);
@@ -747,10 +757,12 @@ public class ClientCnxn {
                     LOG.debug("Got notification sessionid:0x"
                         + Long.toHexString(sessionId));
                 }
+                // deserialize
                 WatcherEvent event = new WatcherEvent();
                 event.deserialize(bbia, "response");
 
                 // convert from a server path to a client path
+                // handle chrootPath
                 if (chrootPath != null) {
                     String serverPath = event.getPath();
                     if(serverPath.compareTo(chrootPath)==0)
@@ -764,12 +776,14 @@ public class ClientCnxn {
                     }
                 }
 
+                //recovery watchedevent
                 WatchedEvent we = new WatchedEvent(event);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Got " + we + " for sessionid 0x"
                             + Long.toHexString(sessionId));
                 }
 
+                //push into event queue
                 eventThread.queueEvent( we );
                 return;
             }
@@ -779,6 +793,7 @@ public class ClientCnxn {
                     throw new IOException("Nothing in the queue, but got "
                             + replyHdr.getXid());
                 }
+                // get last wait for resp
                 packet = pendingQueue.remove();
             }
             /*
@@ -813,6 +828,7 @@ public class ClientCnxn {
                             + Long.toHexString(sessionId) + ", packet:: " + packet);
                 }
             } finally {
+                // finish this packet
                 finishPacket(packet);
             }
         }
@@ -1032,6 +1048,7 @@ public class ClientCnxn {
                         to = Math.min(to, pingRwTimeout - idlePingRwServer);
                     }
 
+                    // send the packet in queue
                     clientCnxnSocket.doTransport(to, pendingQueue, outgoingQueue);
 
                 } catch (Throwable e) {
@@ -1246,6 +1263,7 @@ public class ClientCnxn {
             Record response, WatchRegistration watchRegistration)
             throws InterruptedException {
         ReplyHeader r = new ReplyHeader();
+        // wrap as a packet(the watch registration wrap into the obj) and then add into the packet queue
         Packet packet = queuePacket(h, r, request, response, null, null, null,
                     null, watchRegistration);
         synchronized (packet) {
@@ -1261,10 +1279,12 @@ public class ClientCnxn {
             String serverPath, Object ctx, WatchRegistration watchRegistration)
     {
         Packet packet = null;
+        // sync
         synchronized (outgoingQueue) {
             if (h.getType() != OpCode.ping && h.getType() != OpCode.auth) {
                 h.setXid(getXid());
             }
+            // create a packet obj
             packet = new Packet(h, r, request, response, watchRegistration);
             packet.cb = cb;
             packet.ctx = ctx;
@@ -1278,9 +1298,11 @@ public class ClientCnxn {
                 if (h.getType() == OpCode.closeSession) {
                     closing = true;
                 }
+                // add into queue
                 outgoingQueue.add(packet);
             }
         }
+        // then sendThread will send
         sendThread.getClientCnxnSocket().wakeupCnxn();
         return packet;
     }

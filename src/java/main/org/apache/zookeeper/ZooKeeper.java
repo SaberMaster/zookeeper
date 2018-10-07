@@ -130,6 +130,7 @@ public class ZooKeeper {
         private final Map<String, Set<Watcher>> childWatches =
             new HashMap<String, Set<Watcher>>();
 
+        // on create new zookeeper the default watcher
         private volatile Watcher defaultWatcher;
 
         final private void addTo(Set<Watcher> from, Set<Watcher> to) {
@@ -147,6 +148,7 @@ public class ZooKeeper {
                                         Watcher.Event.EventType type,
                                         String clientPath)
         {
+            // return all watcher
             Set<Watcher> result = new HashSet<Watcher>();
 
             switch (type) {
@@ -247,6 +249,7 @@ public class ZooKeeper {
             if (shouldAddWatch(rc)) {
                 Map<String, Set<Watcher>> watches = getWatches(rc);
                 synchronized(watches) {
+                    // get watcheres for this path
                     Set<Watcher> watchers = watches.get(clientPath);
                     if (watchers == null) {
                         watchers = new HashSet<Watcher>();
@@ -1109,12 +1112,14 @@ public class ZooKeeper {
     public byte[] getData(final String path, Watcher watcher, Stat stat)
         throws KeeperException, InterruptedException
      {
+         // use name watcher
         final String clientPath = path;
         PathUtils.validatePath(clientPath);
 
         // the watch contains the un-chroot path
         WatchRegistration wcb = null;
         if (watcher != null) {
+            // register watcher on the path
             wcb = new DataWatchRegistration(watcher, clientPath);
         }
 
@@ -1122,10 +1127,12 @@ public class ZooKeeper {
 
         RequestHeader h = new RequestHeader();
         h.setType(ZooDefs.OpCode.getData);
+         // request set watcher on the path
         GetDataRequest request = new GetDataRequest();
         request.setPath(serverPath);
         request.setWatch(watcher != null);
         GetDataResponse response = new GetDataResponse();
+        // submit request
         ReplyHeader r = cnxn.submitRequest(h, request, response, wcb);
         if (r.getErr() != 0) {
             throw KeeperException.create(KeeperException.Code.get(r.getErr()),
@@ -1157,6 +1164,7 @@ public class ZooKeeper {
      */
     public byte[] getData(String path, boolean watch, Stat stat)
             throws KeeperException, InterruptedException {
+        // use the default watcher
         return getData(path, watch ? watchManager.defaultWatcher : null, stat);
     }
 
