@@ -368,6 +368,7 @@ public class ZKDatabase {
      */
     public byte[] getData(String path, Stat stat, Watcher watcher) 
     throws KeeperException.NoNodeException {
+        // get data
         return dataTree.getData(path, stat, watcher);
     }
 

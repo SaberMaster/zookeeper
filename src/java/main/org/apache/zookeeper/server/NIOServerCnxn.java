@@ -1107,6 +1107,7 @@ public class NIOServerCnxn extends ServerCnxn {
         }
 
         // Convert WatchedEvent to a type that can be sent over the wire
+        // wrap and return
         WatcherEvent e = event.getWrapper();
 
         sendResponse(h, e, "notification");

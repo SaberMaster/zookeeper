@@ -396,6 +396,8 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 nodeRecord = getRecordForPath(path);
                 checkACL(zks, nodeRecord.acl, ZooDefs.Perms.WRITE,
                         request.authInfo);
+                // when set data
+                // check node version (occ)
                 version = setDataRequest.getVersion();
                 int currentVersion = nodeRecord.stat.getVersion();
                 if (version != -1 && version != currentVersion) {

@@ -53,25 +53,31 @@ public class WatchManager {
     }
 
     public synchronized void addWatch(String path, Watcher watcher) {
+        // watcher is the servercnxn which hold a connection with client
+        // add watcher
         HashSet<Watcher> list = watchTable.get(path);
         if (list == null) {
             // don't waste memory if there are few watches on a node
             // rehash when the 4th entry is added, doubling size thereafter
             // seems like a good compromise
             list = new HashSet<Watcher>(4);
+            // save to watch Table path->watcheres
             watchTable.put(path, list);
         }
         list.add(watcher);
 
         HashSet<String> paths = watch2Paths.get(watcher);
+        // set paths for this watcher
         if (paths == null) {
             // cnxns typically have many watches, so use default cap here
             paths = new HashSet<String>();
+            // watcher->path
             watch2Paths.put(watcher, paths);
         }
         paths.add(path);
     }
 
+    // remove watcher
     public synchronized void removeWatcher(Watcher watcher) {
         HashSet<String> paths = watch2Paths.remove(watcher);
         if (paths == null) {
@@ -93,11 +99,15 @@ public class WatchManager {
     }
 
     public Set<Watcher> triggerWatch(String path, EventType type, Set<Watcher> supress) {
+        // create a watched event
+        // keeperstate/eventtype/path
         WatchedEvent e = new WatchedEvent(type,
                 KeeperState.SyncConnected, path);
         HashSet<Watcher> watchers;
         synchronized (this) {
+            // remove in watch table
             watchers = watchTable.remove(path);
+            // if empty return
             if (watchers == null || watchers.isEmpty()) {
                 if (LOG.isTraceEnabled()) {
                     ZooTrace.logTraceMessage(LOG,
@@ -106,6 +116,7 @@ public class WatchManager {
                 }
                 return null;
             }
+            // remove path according watcher
             for (Watcher w : watchers) {
                 HashSet<String> paths = watch2Paths.get(w);
                 if (paths != null) {
@@ -117,6 +128,7 @@ public class WatchManager {
             if (supress != null && supress.contains(w)) {
                 continue;
             }
+            // handle watcher
             w.process(e);
         }
         return watchers;

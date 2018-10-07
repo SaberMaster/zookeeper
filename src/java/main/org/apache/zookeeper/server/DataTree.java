@@ -82,8 +82,10 @@ public class DataTree {
     private final ConcurrentHashMap<String, DataNode> nodes =
         new ConcurrentHashMap<String, DataNode>();
 
+    // data watcher
     private final WatchManager dataWatches = new WatchManager();
 
+    // child watcher
     private final WatchManager childWatches = new WatchManager();
 
     /** the root of zookeeper tree */
@@ -597,6 +599,7 @@ public class DataTree {
 
     public Stat setData(String path, byte data[], int version, long zxid,
             long time) throws KeeperException.NoNodeException {
+        // node data change
         Stat s = new Stat();
         DataNode n = nodes.get(path);
         if (n == null) {
@@ -617,6 +620,7 @@ public class DataTree {
           this.updateBytes(lastPrefix, (data == null ? 0 : data.length)
               - (lastdata == null ? 0 : lastdata.length));
         }
+        // trigger watcher
         dataWatches.triggerWatch(path, EventType.NodeDataChanged);
         return s;
     }
@@ -649,6 +653,7 @@ public class DataTree {
         }
         synchronized (n) {
             n.copyStat(stat);
+            // add watcher
             if (watcher != null) {
                 dataWatches.addWatch(path, watcher);
             }

@@ -273,6 +273,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 break;
             }
             case OpCode.getData: {
+                // server getData
                 lastOp = "GETD";
                 GetDataRequest getDataRequest = new GetDataRequest();
                 ByteBufferInputStream.byteBuffer2Record(request.request,
@@ -289,7 +290,9 @@ public class FinalRequestProcessor implements RequestProcessor {
                         ZooDefs.Perms.READ,
                         request.authInfo);
                 Stat stat = new Stat();
+                // get data
                 byte b[] = zks.getZKDatabase().getData(getDataRequest.getPath(), stat,
+                        // add watch according the data request true/false
                         getDataRequest.getWatch() ? cnxn : null);
                 rsp = new GetDataResponse(b, stat);
                 break;
