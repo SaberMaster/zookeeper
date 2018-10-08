@@ -117,11 +117,13 @@ public class ClientCnxn {
     /**
      * These are the packets that have been sent and are waiting for a response.
      */
+    // init pendingQueue
     private final LinkedList<Packet> pendingQueue = new LinkedList<Packet>();
 
     /**
      * These are the packets that need to be sent.
      */
+    // int outgoingQueue
     private final LinkedList<Packet> outgoingQueue = new LinkedList<Packet>();
 
     private int connectTimeout;
@@ -379,7 +381,9 @@ public class ClientCnxn {
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
 
+        // init sendThread
         sendThread = new SendThread(clientCnxnSocket);
+        // init eventThread
         eventThread = new EventThread();
 
     }
@@ -405,7 +409,9 @@ public class ClientCnxn {
         disableAutoWatchReset = b;
     }
     public void start() {
+        // sendThread start
         sendThread.start();
+        // eventThread start
         eventThread.start();
     }
 
@@ -864,6 +870,7 @@ public class ClientCnxn {
                      + ", initiating session");
             isFirstConnect = false;
             long sessId = (seenRwServerBefore) ? sessionId : 0;
+            // make a connect Request, to est a session
             ConnectRequest conReq = new ConnectRequest(0, lastZxid,
                     sessionTimeout, sessId, sessionPasswd);
             synchronized (outgoingQueue) {
@@ -894,6 +901,7 @@ public class ClientCnxn {
                             OpCode.auth), null, new AuthPacket(0, id.scheme,
                             id.data), null, null));
                 }
+                // add conReq to outgoing queue
                 outgoingQueue.addFirst(new Packet(null, null, conReq,
                             null, null, readOnly));
             }
@@ -938,6 +946,7 @@ public class ClientCnxn {
         private void startConnect() throws IOException {
             state = States.CONNECTING;
 
+            // get a addr of server
             InetSocketAddress addr;
             if (rwServerAddress != null) {
                 addr = rwServerAddress;
@@ -959,6 +968,7 @@ public class ClientCnxn {
                         Watcher.Event.EventType.None,
                         Watcher.Event.KeeperState.AuthFailed, null));
             }
+            // connect by clientCnxnSocket
             clientCnxnSocket.connect(addr);
         }
 
@@ -986,6 +996,7 @@ public class ClientCnxn {
                         if (closing || !state.isAlive()) {
                             break;
                         }
+                        // start make tcp connect
                         startConnect();
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
@@ -1167,6 +1178,7 @@ public class ClientCnxn {
         void onConnected(int _negotiatedSessionTimeout, long _sessionId,
                 byte[] _sessionPasswd, boolean isRO) throws IOException {
             negotiatedSessionTimeout = _negotiatedSessionTimeout;
+            // expire or close of the connection
             if (negotiatedSessionTimeout <= 0) {
                 state = States.CLOSED;
 
@@ -1181,8 +1193,10 @@ public class ClientCnxn {
             if (!readOnly && isRO) {
                 LOG.error("Read/write client got connected to read-only server");
             }
+            // set timeout
             readTimeout = negotiatedSessionTimeout * 2 / 3;
             connectTimeout = negotiatedSessionTimeout / hostProvider.size();
+            // mark this index of addr is connected
             hostProvider.onConnected();
             sessionId = _sessionId;
             sessionPasswd = _sessionPasswd;
@@ -1194,8 +1208,10 @@ public class ClientCnxn {
                     + ", sessionid = 0x" + Long.toHexString(sessionId)
                     + ", negotiated timeout = " + negotiatedSessionTimeout
                     + (isRO ? " (READ-ONLY mode)" : ""));
+            // generate a sync-connected event
             KeeperState eventState = (isRO) ?
                     KeeperState.ConnectedReadOnly : KeeperState.SyncConnected;
+            // add in event queue, the eventType is none, use the defaultwatcher
             eventThread.queueEvent(new WatchedEvent(
                     Watcher.Event.EventType.None,
                     eventState, null));

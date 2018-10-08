@@ -41,6 +41,7 @@ public final class StaticHostProvider implements HostProvider {
     private final List<InetSocketAddress> serverAddresses = new ArrayList<InetSocketAddress>(
             5);
 
+    // is the index current use
     private int lastIndex = -1;
 
     private int currentIndex = -1;

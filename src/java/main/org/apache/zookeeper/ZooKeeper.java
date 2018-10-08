@@ -94,6 +94,7 @@ public class ZooKeeper {
         Environment.logEnv("Client environment:", LOG);
     }
 
+    // create a clientWatchManager on init
     private final ZKWatchManager watchManager = new ZKWatchManager();
 
     List<String> getDataWatches() {
@@ -577,16 +578,21 @@ public class ZooKeeper {
                 + " sessionPasswd="
                 + (sessionPasswd == null ? "<null>" : "<hidden>"));
 
+        // set default watcher
         watchManager.defaultWatcher = watcher;
 
         ConnectStringParser connectStringParser = new ConnectStringParser(
                 connectString);
+        // save host in hostProvider
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
+        // create and init clientCnxn
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
+                // create ClientCnxnSocket
                 getClientCnxnSocket(), sessionId, sessionPasswd, canBeReadOnly);
         cnxn.seenRwServerBefore = true; // since user has provided sessionId
+        // start clientCnxn
         cnxn.start();
     }
 

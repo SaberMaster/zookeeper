@@ -62,6 +62,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         if (sock == null) {
             throw new IOException("Socket is null!");
         }
+        // read response
         if (sockKey.isReadable()) {
             int rc = sock.read(incomingBuffer);
             if (rc < 0) {
@@ -76,6 +77,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     recvCount++;
                     readLength();
                 } else if (!initialized) {
+                    // read connect result
                     readConnectResult();
                     enableRead();
                     if (!outgoingQueue.isEmpty()) {
@@ -93,12 +95,15 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             }
         }
+        // write packet
         if (sockKey.isWritable()) {
             LinkedList<Packet> pending = new LinkedList<Packet>();
             synchronized (outgoingQueue) {
                 if (!outgoingQueue.isEmpty()) {
                     updateLastSend();
+                    // ser the packet
                     ByteBuffer pbb = outgoingQueue.getFirst().bb;
+                    // send
                     sock.write(pbb);
                     if (!pbb.hasRemaining()) {
                         sentCount++;
@@ -202,6 +207,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         sockKey = sock.register(selector, SelectionKey.OP_CONNECT);
         boolean immediateConnect = sock.connect(addr);            
         if (immediateConnect) {
+            // make prime connection
             sendThread.primeConnection();
         }
     }
@@ -288,6 +294,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
+                // handle pendingQueue and outgoingQueue
                 doIO(pendingQueue, outgoingQueue);
             }
         }

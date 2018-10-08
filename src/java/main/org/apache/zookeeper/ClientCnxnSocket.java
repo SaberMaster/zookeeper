@@ -126,6 +126,7 @@ abstract class ClientCnxnSocket {
         }
         ByteBufferInputStream bbis = new ByteBufferInputStream(incomingBuffer);
         BinaryInputArchive bbia = BinaryInputArchive.getArchive(bbis);
+        // deserialize
         ConnectResponse conRsp = new ConnectResponse();
         conRsp.deserialize(bbia, "connect");
 
@@ -139,7 +140,9 @@ abstract class ClientCnxnSocket {
             LOG.warn("Connected to an old server; r-o mode will be unavailable");
         }
 
+        // get the session id
         this.sessionId = conRsp.getSessionId();
+        // notify the sendThread connect ok
         sendThread.onConnected(conRsp.getTimeOut(), this.sessionId,
                 conRsp.getPasswd(), isRO);
     }
