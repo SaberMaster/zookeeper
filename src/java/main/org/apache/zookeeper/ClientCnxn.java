@@ -275,13 +275,14 @@ public class ClientCnxn {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos);
                 boa.writeInt(-1, "len"); // We'll fill this in later
-                // serialize header
+                // serialize request header
                 if (requestHeader != null) {
                     requestHeader.serialize(boa, "header");
                 }
                 if (request instanceof ConnectRequest) {
                     request.serialize(boa, "connect");
                     // append "am-I-allowed-to-be-readonly" flag
+                    // serialize readonly
                     boa.writeBool(readOnly, "readOnly");
                 } else if (request != null) {
                     // serialize request
@@ -525,6 +526,7 @@ public class ClientCnxn {
 
        private void processEvent(Object event) {
           try {
+              // handle watcher
               if (event instanceof WatcherSetEventPair) {
                   // each watcher will process the event
                   WatcherSetEventPair pair = (WatcherSetEventPair) event;
@@ -537,6 +539,7 @@ public class ClientCnxn {
                       }
                   }
               } else {
+                  //handle AsyncCallback
                   Packet p = (Packet) event;
                   int rc = 0;
                   String clientPath = p.clientPath;
@@ -757,6 +760,7 @@ public class ClientCnxn {
                 }
                 return;
             }
+            // if is a event
             if (replyHdr.getXid() == -1) {
                 // -1 means notification
                 if (LOG.isDebugEnabled()) {
@@ -834,7 +838,7 @@ public class ClientCnxn {
                             + Long.toHexString(sessionId) + ", packet:: " + packet);
                 }
             } finally {
-                // finish this packet
+                // finish this packet(reg watcher)
                 finishPacket(packet);
             }
         }
@@ -1200,6 +1204,7 @@ public class ClientCnxn {
             hostProvider.onConnected();
             sessionId = _sessionId;
             sessionPasswd = _sessionPasswd;
+            // set state to connected
             state = (isRO) ?
                     States.CONNECTEDREADONLY : States.CONNECTED;
             seenRwServerBefore |= !isRO;

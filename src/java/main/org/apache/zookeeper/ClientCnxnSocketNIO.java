@@ -76,6 +76,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 if (incomingBuffer == lenBuffer) {
                     recvCount++;
                     readLength();
+                    // if not init means is establish a session
                 } else if (!initialized) {
                     // read connect result
                     readConnectResult();
@@ -88,6 +89,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     updateLastHeard();
                     initialized = true;
                 } else {
+                    // handle response
                     sendThread.readResponse(incomingBuffer);
                     lenBuffer.clear();
                     incomingBuffer = lenBuffer;
@@ -111,6 +113,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         if (p.requestHeader != null
                                 && p.requestHeader.getType() != OpCode.ping
                                 && p.requestHeader.getType() != OpCode.auth) {
+                            // add to pending
                             pending.add(p);
                         }
                     }
