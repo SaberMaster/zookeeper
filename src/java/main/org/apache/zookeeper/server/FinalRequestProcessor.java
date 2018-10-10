@@ -96,6 +96,7 @@ public class FinalRequestProcessor implements RequestProcessor {
             ZooTrace.logRequest(LOG, traceMask, 'E', request, "");
         }
         ProcessTxnResult rc = null;
+        // remove the ephemerals nodes which we need to delete
         synchronized (zks.outstandingChanges) {
             while (!zks.outstandingChanges.isEmpty()
                     && zks.outstandingChanges.get(0).zxid <= request.zxid) {
@@ -113,6 +114,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                TxnHeader hdr = request.hdr;
                Record txn = request.txn;
 
+               // remove session
                rc = zks.processTxn(hdr, txn);
             }
             // do not add non quorum packets to the queue.
@@ -130,6 +132,7 @@ public class FinalRequestProcessor implements RequestProcessor {
                 // close session response being lost - we've already closed
                 // the session/socket here before we can send the closeSession
                 // in the switch block below
+                // close NioServerCnxn
                 scxn.closeSession(request.sessionId);
                 return;
             }
