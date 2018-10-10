@@ -98,6 +98,7 @@ public class QuorumPeerMain {
     {
         QuorumPeerConfig config = new QuorumPeerConfig();
         if (args.length == 1) {
+            // parse config
             config.parse(args[0]);
         }
 
@@ -107,6 +108,7 @@ public class QuorumPeerMain {
                 .getSnapRetainCount(), config.getPurgeInterval());
         purgeMgr.start();
 
+        // check config is standalone
         if (args.length == 1 && config.servers.size() > 0) {
             runFromConfig(config);
         } else {

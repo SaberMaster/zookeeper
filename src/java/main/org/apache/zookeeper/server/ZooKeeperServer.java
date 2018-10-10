@@ -383,17 +383,21 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             zkDb = new ZKDatabase(this.txnLogFactory);
         }  
         if (!zkDb.isInitialized()) {
+            // restore data
             loadData();
         }
     }
     
-    public void startup() {        
+    public void startup() {
+        // create session tracker
         if (sessionTracker == null) {
             createSessionTracker();
         }
         startSessionTracker();
+        // init zk invoke chain
         setupRequestProcessors();
 
+        // register JMX
         registerJMX();
 
         synchronized (this) {

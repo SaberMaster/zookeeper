@@ -407,7 +407,8 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     @Override
     public synchronized void start() {
         loadDataBase();
-        cnxnFactory.start();        
+        cnxnFactory.start();
+        // start leader election
         startLeaderElection();
         super.start();
     }
@@ -487,6 +488,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
                 throw new RuntimeException(e);
             }
         }
+        // create leader election algorithm
         this.electionAlg = createElectionAlgorithm(electionType);
     }
     
@@ -582,10 +584,13 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
             le = new AuthFastLeaderElection(this, true);
             break;
         case 3:
+            // create qcm
             qcm = new QuorumCnxManager(this);
             QuorumCnxManager.Listener listener = qcm.listener;
             if(listener != null){
+                // start pcm listener
                 listener.start();
+                // use fastLeaderElection
                 le = new FastLeaderElection(this, qcm);
             } else {
                 LOG.error("Null listener when initializing cnx manager");

@@ -97,13 +97,17 @@ public class QuorumCnxManager {
     /*
      * Mapping from Peer to Thread number
      */
+    // each sendWorker match a remote zk server
     final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;
+    // to be send msg, each server has a queue
     final ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap;
+    // last msg send
     final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;
 
     /*
      * Reception queue
      */
+    // receive queue
     public final ArrayBlockingQueue<Message> recvQueue;
     /*
      * Object to synchronize access to recvQueue
@@ -137,6 +141,7 @@ public class QuorumCnxManager {
     }
 
     public QuorumCnxManager(QuorumPeer self) {
+        // init queue
         this.recvQueue = new ArrayBlockingQueue<Message>(RECV_CAPACITY);
         this.queueSendMap = new ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>>();
         this.senderWorkerMap = new ConcurrentHashMap<Long, SendWorker>();
@@ -149,7 +154,8 @@ public class QuorumCnxManager {
         
         this.self = self;
 
-        // Starts listener thread that waits for connection requests 
+        // Starts listener thread that waits for connection requests
+        // new listener
         listener = new Listener();
     }
 
@@ -268,6 +274,8 @@ public class QuorumCnxManager {
 
             // Otherwise start worker threads to receive data.
         } else {
+            // if the sid remote larger than local
+            // create sendWorker and RecvWorker for the sid
             SendWorker sw = new SendWorker(sock, sid);
             RecvWorker rw = new RecvWorker(sock, sid, sw);
             sw.setRecv(rw);
@@ -276,14 +284,16 @@ public class QuorumCnxManager {
             
             if(vsw != null)
                 vsw.finish();
-            
+
+            // save in senderWorkderMap
             senderWorkerMap.put(sid, sw);
             
             if (!queueSendMap.containsKey(sid)) {
                 queueSendMap.put(sid, new ArrayBlockingQueue<ByteBuffer>(
                         SEND_CAPACITY));
             }
-            
+
+            // start sendworker and recvworker
             sw.start();
             rw.start();
             
@@ -478,6 +488,7 @@ public class QuorumCnxManager {
             int numRetries = 0;
             while((!shutdown) && (numRetries < 3)){
                 try {
+                    // create a server socket listen leader elec port
                     ss = new ServerSocket();
                     ss.setReuseAddress(true);
                     int port = self.quorumPeers.get(self.getId()).electionAddr
@@ -488,10 +499,12 @@ public class QuorumCnxManager {
                             .toString());
                     ss.bind(addr);
                     while (!shutdown) {
+                        // accept other server's connect
                         Socket client = ss.accept();
                         setSockOpts(client);
                         LOG.info("Received connection request "
                                 + client.getRemoteSocketAddress());
+                        // handle the  client connect request
                         receiveConnection(client);
                         numRetries = 0;
                     }
@@ -644,6 +657,7 @@ public class QuorumCnxManager {
                  * stale message, we should send the message in the send queue.
                  */
                 ArrayBlockingQueue<ByteBuffer> bq = queueSendMap.get(sid);
+                // if send queue is empty, resend lastMsg
                 if (bq == null || isSendQueueEmpty(bq)) {
                    ByteBuffer b = lastMessageSent.get(sid);
                    if (b != null) {
@@ -661,6 +675,7 @@ public class QuorumCnxManager {
 
                     ByteBuffer b = null;
                     try {
+                        // send msg from sendqueue
                         ArrayBlockingQueue<ByteBuffer> bq = queueSendMap
                                 .get(sid);
                         if (bq != null) {
@@ -672,6 +687,7 @@ public class QuorumCnxManager {
                         }
 
                         if(b != null){
+                            // put msg in lastMsgSend
                             lastMessageSent.put(sid, b);
                             send(b);
                         }
